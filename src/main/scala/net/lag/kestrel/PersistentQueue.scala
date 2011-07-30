@@ -69,7 +69,7 @@ class PersistentQueue(val name: String, persistencePath: String, @volatile var c
   private var journal =
     new Journal(new File(persistencePath).getCanonicalFile, name, timer, config.syncJournal)
 
-  private val waiters = new DeadlineWaitQueue(timer)
+  protected val waiters = new DeadlineWaitQueue(timer)
 
   // track tentative removals
   private var xidCounter: Int = 0
@@ -166,6 +166,7 @@ class PersistentQueue(val name: String, persistencePath: String, @volatile var c
    * Add a value to the end of the queue, transactionally.
    */
   def add(value: Array[Byte], expiry: Option[Time], xid: Option[Int]): Boolean = {
+    var item : QItem = null;
     val future = synchronized {
       if (closed || value.size > config.maxItemSize.inBytes) return false
       if (config.fanoutOnly && !isFanout) return true
@@ -177,7 +178,7 @@ class PersistentQueue(val name: String, persistencePath: String, @volatile var c
       }
 
       val now = Time.now
-      val item = QItem(now, adjustExpiry(now, expiry), value, 0)
+      item = QItem(now, adjustExpiry(now, expiry), value, 0)
       if (config.keepJournal) {
         checkRotateJournal()
         if (!journal.inReadBehind && (queueSize >= config.maxMemorySize.inBytes)) {
@@ -196,10 +197,14 @@ class PersistentQueue(val name: String, persistencePath: String, @volatile var c
         Future.void()
       }
     }
-    waiters.trigger()
+    itemWasAdded(item)
     // for now, don't wait:
     //future()
     true
+  }
+
+  protected def itemWasAdded(item : QItem): Unit = {
+    waiters.trigger()
   }
 
   def add(value: Array[Byte]): Boolean = add(value, None, None)
@@ -281,8 +286,7 @@ class PersistentQueue(val name: String, persistencePath: String, @volatile var c
     synchronized {
       if (!closed) {
         if (config.keepJournal) journal.unremove(xid)
-        _unremove(xid)
-        waiters.trigger()
+        _unremove(xid).foreach(itemWasAdded(_))
       }
     }
   }
@@ -476,6 +480,7 @@ class PersistentQueue(val name: String, persistencePath: String, @volatile var c
       queueSize += item.data.length
       item +=: queue
       _memoryBytes += item.data.length
+      item
     }
   }
 }

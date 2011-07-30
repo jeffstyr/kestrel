@@ -2,6 +2,7 @@ import com.twitter.conversions.storage._
 import com.twitter.conversions.time._
 import com.twitter.logging.config._
 import com.twitter.ostrich.admin.config._
+import main.scala.net.lag.kestrel.{ThrottledPersistentQueue, DelayedPersistentQueue}
 import net.lag.kestrel.config._
 
 new KestrelConfig {
@@ -51,6 +52,7 @@ new KestrelConfig {
     syncJournal = 0.seconds
   } :: new QueueBuilder {
     name = "spam"
+    factory = { new ThrottledPersistentQueue(1000, 1.seconds, _, _, _, _, _) }
   } :: new QueueBuilder {
     name = "spam0"
   } :: new QueueBuilder {
@@ -62,6 +64,14 @@ new KestrelConfig {
     maxMemorySize = 16.megabytes
     maxJournalSize = 128.megabytes
     discardOldWhenFull = true
+  } :: new QueueBuilder {
+    name = "delayed"
+    keepJournal = false
+    factory = { new DelayedPersistentQueue(10.seconds, _, _, _, _, _) }
+  } :: new QueueBuilder {
+    name = "throttled"
+    keepJournal = false
+    factory = { new ThrottledPersistentQueue(3, 10.seconds, _, _, _, _, _) }
   }
 
   loggers = new LoggerConfig {

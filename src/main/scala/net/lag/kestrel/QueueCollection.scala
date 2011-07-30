@@ -51,7 +51,14 @@ class QueueCollection(queueFolder: String, timer: Timer,
   private def buildQueue(name: String, realName: String, path: String) = {
     val config = queueConfigMap.getOrElse(name, defaultQueueConfig)
     log.info("Setting up queue %s: %s", realName, config)
-    new PersistentQueue(realName, path, config, timer, Some(this.apply))
+    config.factory(realName, path, config, timer, Some(this.apply))
+
+/*
+    val instance = config.classNameForQueue match {
+      case Some(x) => Class.forName(x).getConstructor().newInstance(realName, path, config, timer, Some(this.apply))
+      case None => new PersistentQueue(realName, path, config, timer, Some(this.apply))
+    }
+*/
   }
 
   // preload any queues

@@ -24,7 +24,7 @@ import com.twitter.logging.Logger
 import com.twitter.logging.config._
 import com.twitter.ostrich.admin.{RuntimeEnvironment, ServiceTracker}
 import com.twitter.ostrich.admin.config._
-import com.twitter.util.{Config, Duration, StorageUnit}
+import com.twitter.util.{Timer, Config, Duration, StorageUnit}
 
 case class QueueConfig(
   maxItems: Int,
@@ -39,7 +39,8 @@ case class QueueConfig(
   syncJournal: Duration,
   expireToQueue: Option[String],
   maxExpireSweep: Int,
-  fanoutOnly: Boolean
+  fanoutOnly: Boolean,
+  factory: (String, String, QueueConfig, Timer, Option[(String => Option[PersistentQueue])]) => PersistentQueue
 ) {
   override def toString() = {
     ("maxItems=%d maxSize=%s maxItemSize=%s maxAge=%s defaultJournalSize=%s maxMemorySize=%s " +
@@ -140,10 +141,13 @@ class QueueBuilder extends Config[QueueConfig] {
    */
   var fanoutOnly: Boolean = false
 
+  var factory = (name: String, persistencePath: String, config: QueueConfig, timer: Timer, queueLookup: Option[(String => Option[PersistentQueue])]) =>
+                    new PersistentQueue(name, persistencePath, config, timer, queueLookup)
+
   def apply() = {
     QueueConfig(maxItems, maxSize, maxItemSize, maxAge, defaultJournalSize, maxMemorySize,
                 maxJournalSize, discardOldWhenFull, keepJournal, syncJournal,
-                expireToQueue, maxExpireSweep, fanoutOnly)
+                expireToQueue, maxExpireSweep, fanoutOnly, factory)
   }
 }
 
