@@ -52,7 +52,6 @@ new KestrelConfig {
     syncJournal = 0.seconds
   } :: new QueueBuilder {
     name = "spam"
-    factory = { new ThrottledPersistentQueue(1000, 1.seconds, _, _, _, _, _) }
   } :: new QueueBuilder {
     name = "spam0"
   } :: new QueueBuilder {
