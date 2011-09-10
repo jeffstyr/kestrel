@@ -72,6 +72,9 @@ new KestrelConfig {
     name = "throttled"
     keepJournal = false
     factory = { new ThrottledPersistentQueue(3, 10.seconds, _, _, _, _, _) }
+  } :: new QueueBuilder {
+    name = "slow"
+    syncJournal = 10.milliseconds
   }
 
   loggers = new LoggerConfig {
