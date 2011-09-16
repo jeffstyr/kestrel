@@ -27,6 +27,7 @@ import com.twitter.util.{Duration, Time}
 import org.jboss.netty.channel._
 import org.jboss.netty.channel.group.ChannelGroup
 import org.jboss.netty.handler.timeout._
+import java.util.concurrent.Executor
 
 /**
  * Kestrel handler that uses netty. Wraps up common netty code so you only receive a
@@ -36,8 +37,9 @@ abstract class NettyHandler[M](
   val channelGroup: ChannelGroup,
   queueCollection: QueueCollection,
   maxOpenTransactions: Int,
-  clientTimeout: Option[Duration])
-extends KestrelHandler(queueCollection, maxOpenTransactions) with ChannelUpstreamHandler {
+  clientTimeout: Option[Duration],
+  executor: Executor)
+extends KestrelHandler(queueCollection, maxOpenTransactions, executor) with ChannelUpstreamHandler {
   val log = Logger.get(getClass.getName)
 
   private var remoteAddress: InetSocketAddress = null

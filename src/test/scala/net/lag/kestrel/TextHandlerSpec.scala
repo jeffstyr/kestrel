@@ -26,6 +26,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.channel.group.ChannelGroup
 import org.specs.Specification
 import org.specs.mock.{ClassMocker, JMocker}
+import java.util.concurrent.Executors
 
 class TextHandlerSpec extends Specification with JMocker with ClassMocker {
   def wrap(s: String) = ChannelBuffers.wrappedBuffer(s.getBytes)
@@ -86,6 +87,11 @@ class TextHandlerSpec extends Specification with JMocker with ClassMocker {
     val channelGroup = mock[ChannelGroup]
     val queueCollection = mock[QueueCollection]
     val qitem = QItem(Time.now, None, "state shirt".getBytes, 23)
+    val executor = Executors.newCachedThreadPool()
+
+    doAfter {
+      executor.shutdown()
+    }
 
     "get request" in {
       expect {
@@ -93,7 +99,7 @@ class TextHandlerSpec extends Specification with JMocker with ClassMocker {
         one(channelGroup).add(channel) willReturn true
       }
 
-      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None)
+      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None, executor)
       textHandler.handleUpstream(null, new UpstreamChannelStateEvent(channel, ChannelState.OPEN, true))
 
       "closes transactions" in {
@@ -185,7 +191,7 @@ class TextHandlerSpec extends Specification with JMocker with ClassMocker {
         one(channel).write(CountResponse(1))
       }
 
-      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None)
+      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None, executor)
       textHandler.handleUpstream(null, new UpstreamChannelStateEvent(channel, ChannelState.OPEN, true))
       textHandler.handle(TextRequest("put", List("test"), List("hello".getBytes)))
     }
@@ -198,7 +204,7 @@ class TextHandlerSpec extends Specification with JMocker with ClassMocker {
         one(channel).write(CountResponse(0))
       }
 
-      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None)
+      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None, executor)
       textHandler.handleUpstream(null, new UpstreamChannelStateEvent(channel, ChannelState.OPEN, true))
       textHandler.handle(TextRequest("delete", List("test"), Nil))
     }
@@ -213,7 +219,7 @@ class TextHandlerSpec extends Specification with JMocker with ClassMocker {
         one(channel).write(a[StringResponse])
       }
 
-      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None)
+      val textHandler = new TextHandler(channelGroup, queueCollection, 10, None, executor)
       textHandler.handleUpstream(null, new UpstreamChannelStateEvent(channel, ChannelState.OPEN, true))
       textHandler.handle(TextRequest("version", Nil, Nil))
     }

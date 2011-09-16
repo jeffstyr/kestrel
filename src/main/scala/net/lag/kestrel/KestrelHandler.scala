@@ -23,6 +23,7 @@ import com.twitter.logging.Logger
 import com.twitter.ostrich.admin.{BackgroundProcess, ServiceTracker}
 import com.twitter.ostrich.stats.Stats
 import com.twitter.util.{Future, Duration, Time}
+import java.util.concurrent.Executor
 
 class TooManyOpenTransactionsException extends Exception("Too many open transactions.")
 object TooManyOpenTransactionsException extends TooManyOpenTransactionsException
@@ -30,7 +31,7 @@ object TooManyOpenTransactionsException extends TooManyOpenTransactionsException
 /**
  * Common implementations of kestrel commands that don't depend on which protocol you're using.
  */
-abstract class KestrelHandler(val queues: QueueCollection, val maxOpenTransactions: Int) {
+abstract class KestrelHandler(val queues: QueueCollection, val maxOpenTransactions: Int, val executor: Executor) {
   private val log = Logger.get(getClass.getName)
 
   val sessionId = Kestrel.sessionId.incrementAndGet()
@@ -71,12 +72,20 @@ abstract class KestrelHandler(val queues: QueueCollection, val maxOpenTransactio
     def peek(name: String): List[Int] = synchronized { transactions(name).toList }
 
     def cancelAll() {
-      synchronized {
-        val currentTransactions = transactions;
-        transactions = createMap()
-        currentTransactions
-      }.foreach { case (name, xids) =>
-        xids.foreach { xid => queues.unremove(name, xid) }
+      val transactionToCancel = synchronized {
+        val openTransactions = transactions.filter { case (name, xids) => !xids.isEmpty }
+        if (!openTransactions.isEmpty) { transactions = createMap() }
+        openTransactions
+      }
+
+      if(!transactionToCancel.isEmpty) {
+        executor.execute(new Runnable {
+          def run() {
+            transactionToCancel.foreach { case (name, xids) =>
+              xids.foreach { xid => queues.unremove(name, xid) }
+            }
+          }
+        })
       }
     }
 

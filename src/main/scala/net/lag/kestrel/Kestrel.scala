@@ -107,7 +107,7 @@ class Kestrel(defaultQueueConfig: QueueConfig, builders: List[QueueBuilder],
           case Protocol.Ascii => MemcacheCodec.asciiCodec(bytesRead, bytesWritten)
           case Protocol.Binary => throw new Exception("Binary protocol not supported yet.")
         }
-        val handler = new MemcacheHandler(channelGroup, queueCollection, maxOpenTransactions, clientTimeout)
+        val handler = new MemcacheHandler(channelGroup, queueCollection, maxOpenTransactions, clientTimeout, executor)
         Channels.pipeline(protocolCodec, handler)
       }
     }
@@ -119,7 +119,7 @@ class Kestrel(defaultQueueConfig: QueueConfig, builders: List[QueueBuilder],
     val textPipelineFactory = new ChannelPipelineFactory() {
       def getPipeline() = {
         val protocolCodec = TextCodec(bytesRead, bytesWritten)
-        val handler = new TextHandler(channelGroup, queueCollection, maxOpenTransactions, clientTimeout)
+        val handler = new TextHandler(channelGroup, queueCollection, maxOpenTransactions, clientTimeout, executor)
         Channels.pipeline(protocolCodec, handler)
       }
     }

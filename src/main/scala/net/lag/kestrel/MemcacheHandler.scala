@@ -26,6 +26,7 @@ import com.twitter.ostrich.stats.Stats
 import com.twitter.util.{Duration, Time}
 import org.jboss.netty.channel.Channel
 import org.jboss.netty.channel.group.ChannelGroup
+import java.util.concurrent.Executor
 
 /**
  * Memcache protocol handler for a kestrel connection.
@@ -34,8 +35,9 @@ class MemcacheHandler(
   channelGroup: ChannelGroup,
   queueCollection: QueueCollection,
   maxOpenTransactions: Int,
-  clientTimeout: Option[Duration])
-extends NettyHandler[MemcacheRequest](channelGroup, queueCollection, maxOpenTransactions, clientTimeout) {
+  clientTimeout: Option[Duration],
+  executor: Executor)
+extends NettyHandler[MemcacheRequest](channelGroup, queueCollection, maxOpenTransactions, clientTimeout, executor) {
   protected final def handle(request: MemcacheRequest) = {
     request.line(0) match {
       case "get" =>

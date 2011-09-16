@@ -26,6 +26,7 @@ import com.twitter.util.{Duration, Time}
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import org.jboss.netty.channel.Channel
 import org.jboss.netty.channel.group.ChannelGroup
+import java.util.concurrent.Executor
 
 object TextCodec {
   val MAX_PUT_BUFFER = 1024
@@ -100,8 +101,9 @@ class TextHandler(
   channelGroup: ChannelGroup,
   queueCollection: QueueCollection,
   maxOpenTransactions: Int,
-  clientTimeout: Option[Duration])
-extends NettyHandler[TextRequest](channelGroup, queueCollection, maxOpenTransactions, clientTimeout) {
+  clientTimeout: Option[Duration],
+  executor: Executor)
+extends NettyHandler[TextRequest](channelGroup, queueCollection, maxOpenTransactions, clientTimeout, executor) {
   final def handle(request: TextRequest) = {
     request.command match {
       case "put" =>
