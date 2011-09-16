@@ -25,9 +25,10 @@ import com.twitter.util.{TempFolder, Time, Timer}
 import org.specs.Specification
 import org.specs.matcher.Matcher
 import config._
+import java.util.concurrent.{Executors, Executor}
 
-class FakeKestrelHandler(queues: QueueCollection, maxOpenTransactions: Int)
-      extends KestrelHandler(queues, maxOpenTransactions) {
+class FakeKestrelHandler(queues: QueueCollection, maxOpenTransactions: Int, executor: Executor)
+      extends KestrelHandler(queues, maxOpenTransactions, executor) {
   protected def clientDescription: String = "none"
 }
 
@@ -44,15 +45,17 @@ class KestrelHandlerSpec extends Specification with TempFolder with TestLogging 
   "KestrelHandler" should {
     var queues: QueueCollection = null
     val timer = new FakeTimer()
+    val executor = Executors.newCachedThreadPool()
 
     doAfter {
       queues.shutdown()
+      executor.shutdown()
     }
 
     "set and get" in {
       withTempFolder {
         queues = new QueueCollection(folderName, timer, config, Nil)
-        val handler = new FakeKestrelHandler(queues, 10)
+        val handler = new FakeKestrelHandler(queues, 10, executor)
         handler.setItem("test", 0, None, "one".getBytes)
         handler.setItem("test", 0, None, "two".getBytes)
         handler.getItem("test", None, false, false)() must beString("one")
@@ -64,7 +67,7 @@ class KestrelHandlerSpec extends Specification with TempFolder with TestLogging 
       withTempFolder {
         Stats.clearAll()
         queues = new QueueCollection(folderName, timer, config, Nil)
-        val handler = new FakeKestrelHandler(queues, 10)
+        val handler = new FakeKestrelHandler(queues, 10, executor)
 
         Stats.getCounter("cmd_get")() mustEqual 0
         Stats.getCounter("cmd_set")() mustEqual 0
@@ -92,7 +95,7 @@ class KestrelHandlerSpec extends Specification with TempFolder with TestLogging 
     "abort and confirm a transaction" in {
       withTempFolder {
         queues = new QueueCollection(folderName, timer, config, Nil)
-        val handler = new FakeKestrelHandler(queues, 10)
+        val handler = new FakeKestrelHandler(queues, 10, executor)
         handler.setItem("test", 0, None, "one".getBytes)
         handler.getItem("test", None, true, false)() must beString("one")
         handler.getItem("test", None, true, false)() mustEqual None
@@ -107,7 +110,7 @@ class KestrelHandlerSpec extends Specification with TempFolder with TestLogging 
       "on one queue" in {
         withTempFolder {
           queues = new QueueCollection(folderName, timer, config, Nil)
-          val handler = new FakeKestrelHandler(queues, 10)
+          val handler = new FakeKestrelHandler(queues, 10, executor)
           handler.setItem("test", 0, None, "one".getBytes)
           handler.setItem("test", 0, None, "two".getBytes)
           handler.setItem("test", 0, None, "three".getBytes)
@@ -125,7 +128,7 @@ class KestrelHandlerSpec extends Specification with TempFolder with TestLogging 
       "on several queues" in {
         withTempFolder {
           queues = new QueueCollection(folderName, timer, config, Nil)
-          val handler = new FakeKestrelHandler(queues, 10)
+          val handler = new FakeKestrelHandler(queues, 10, executor)
           handler.setItem("red", 0, None, "red1".getBytes)
           handler.setItem("red", 0, None, "red2".getBytes)
           handler.setItem("green", 0, None, "green1".getBytes)
@@ -154,7 +157,7 @@ class KestrelHandlerSpec extends Specification with TempFolder with TestLogging 
       "but not if transactions are limited" in {
         withTempFolder {
           queues = new QueueCollection(folderName, timer, config, Nil)
-          val handler = new FakeKestrelHandler(queues, 1)
+          val handler = new FakeKestrelHandler(queues, 1, executor)
           handler.setItem("red", 0, None, "red1".getBytes)
           handler.setItem("red", 0, None, "red2".getBytes)
           handler.getItem("red", None, true, false)() must beString("red1")
@@ -165,7 +168,7 @@ class KestrelHandlerSpec extends Specification with TempFolder with TestLogging 
       "close all transactions" in {
         withTempFolder {
           queues = new QueueCollection(folderName, timer, config, Nil)
-          val handler = new FakeKestrelHandler(queues, 2)
+          val handler = new FakeKestrelHandler(queues, 2, executor)
           handler.setItem("red", 0, None, "red1".getBytes)
           handler.setItem("red", 0, None, "red2".getBytes)
           handler.getItem("red", None, true, false)() must beString("red1")
