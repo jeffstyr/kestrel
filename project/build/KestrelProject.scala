@@ -9,16 +9,16 @@ class KestrelProject(info: ProjectInfo) extends StandardServiceProject(info) wit
 {
   val util = "com.twitter" % "util-core" % "1.8.1"
 
-  val ostrich = "com.twitter" % "ostrich" % "4.7.3"
+  val ostrich = "com.twitter" % "ostrich" % "4.9.2"
   val naggati = "com.twitter" % "naggati" % "2.1.1"
 
+  // for tests only
   val specs = "org.scala-tools.testing" % "specs_2.8.1" % "1.6.7" % "test"
   val jmock = "org.jmock" % "jmock" % "2.4.0" % "test"
   val cglib = "cglib" % "cglib" % "2.1_3" % "test"
   val asm = "asm" % "asm" % "1.5.3" % "test"
   val objenesis = "org.objenesis" % "objenesis" % "1.1" % "test"
   val hamcrest = "org.hamcrest" % "hamcrest-all" % "1.1" % "test"
-
 
   // workaround bug in sbt that hides scala-compiler.
   override def filterScalaJars = false
@@ -35,7 +35,7 @@ class KestrelProject(info: ProjectInfo) extends StandardServiceProject(info) wit
       </license>
     </licenses>
 
-  override def releaseBuild = true
+  override def releaseBuild = !(projectVersion.toString contains "SNAPSHOT")
 
   override def subversionRepository = Some("http://svn.local.twitter.com/maven-public")
 
