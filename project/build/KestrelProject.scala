@@ -9,7 +9,7 @@ class KestrelProject(info: ProjectInfo) extends StandardServiceProject(info) wit
 {
   val util = "com.twitter" % "util-core" % "1.8.1"
 
-  val ostrich = "com.twitter" % "ostrich" % "4.9.2"
+  val ostrich = "com.twitter" % "ostrich" % "4.9.3"
   val naggati = "com.twitter" % "naggati" % "2.1.1"
 
   // for tests only
@@ -39,7 +39,19 @@ class KestrelProject(info: ProjectInfo) extends StandardServiceProject(info) wit
 
   override def subversionRepository = Some("http://svn.local.twitter.com/maven-public")
 
-  // 100 times: 10,000 items of 1024 bytes each.
+  override def githubRemote = "github"
+
+  // generate a jar that can be run for load tests.
+  def loadTestJarFilename = "kestrel-tests-" + version.toString + ".jar"
+  def loadTestPaths = ((testCompilePath ##) ***) +++ ((mainCompilePath ##) ***)
+  def packageLoadTestsAction =
+    packageTask(loadTestPaths, outputPath, loadTestJarFilename, packageOptions) && task {
+      distPath.asFile.mkdirs()
+      FileUtilities.copyFlat(List(outputPath / loadTestJarFilename), distPath, log).left.toOption
+    }
+  lazy val packageLoadTests = packageLoadTestsAction
+  override def packageDistTask = packageLoadTestsAction && super.packageDistTask
+
 //  override def fork = forkRun(List("-Xmx1024m", "-verbosegc", "-XX:+PrintGCDetails"))
 
   lazy val putMany = task { args =>

@@ -19,6 +19,7 @@ package net.lag.kestrel
 
 import java.io.IOException
 import java.net.InetSocketAddress
+import java.nio.channels.ClosedChannelException
 import scala.collection.mutable
 import com.twitter.conversions.time._
 import com.twitter.logging.Logger
@@ -57,7 +58,7 @@ extends KestrelHandler(queueCollection, maxOpenTransactions, executor) with Chan
         e.getCause() match {
           case _: ProtocolError =>
             handleProtocolError()
-          case e: java.nio.channels.ClosedChannelException =>
+          case e: ClosedChannelException =>
             finish()
           case e: IOException =>
             log.debug("I/O Exception on session %d: %s", sessionId, e.toString)
